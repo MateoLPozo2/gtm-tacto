@@ -7,11 +7,17 @@
     "target_domains": "target_domains.json",
     "brand_list": "brand_list.json"
   },
-  "word_and_character_counter": { "preview_chars": 30 },
+  "word_and_character_counter": {
+    "preview_chars": 30
+  },
   "brand_crawler": {
     "max_pages_per_site": 5,
     "timeout": 10,
-    "exclude_brand": ["tacto", "TACTO", "https://tacto.ai"]
+    "exclude_brand": [
+      "tacto",
+      "TACTO",
+      "https://tacto.ai"
+    ]
   },
   "domain_matcher": {},
   "website_crawler_analyzer": {
@@ -21,5 +27,6 @@
   "website_crawler_and_keyword_finder": {
     "max_pages_per_site": 5,
     "timeout": 10
-  }
+  },
+  "quality_content": {}
 }

@@ -77,6 +77,11 @@ def run_website_crawler_keyword_finder(config: dict, output_dir: Path) -> None:
     m.run(config, output_dir)
 
 
+def run_quality_content(config: dict, output_dir: Path) -> None:
+    import quality_content as m
+    m.run(config, output_dir)
+
+
 def menu_loop(config: dict) -> None:
     while True:
         print("\n" + "=" * 50)
@@ -88,14 +93,15 @@ def menu_loop(config: dict) -> None:
         print("  4) Website crawler + content analyzer")
         print("  5) Website crawler + keyword finder")
         print("  6) Run all")
+        print("  7) Quality Content (QC) score")
         print("  0) Exit")
         print("=" * 50)
         choice = input("Choice: ").strip()
         if choice == "0":
             print("Bye.")
             return
-        if choice not in ("1", "2", "3", "4", "5", "6"):
-            print("Invalid option. Enter 0–6.")
+        if choice not in ("1", "2", "3", "4", "5", "6", "7"):
+            print("Invalid option. Enter 0–7.")
             continue
 
         run_dir = create_run_dir()
@@ -141,6 +147,12 @@ def menu_loop(config: dict) -> None:
                 bn = input("Run brand matcher? Enter brand name (or leave empty to skip): ").strip()
                 if bn:
                     run_brand_crawler(config, run_dir, brand_name=bn)
+                run_quality_content(config, run_dir)
+            elif choice == "7":
+                if not (run_dir / "website_crawler_analyzer.json").exists():
+                    print("Crawler analyzer output not found; running module 4 first.")
+                    run_website_crawler_analyzer(config, run_dir)
+                run_quality_content(config, run_dir)
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             raise
