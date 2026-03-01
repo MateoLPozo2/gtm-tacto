@@ -1,7 +1,8 @@
 """
 Quality Content (QC) module: computes visibility (geo appearance count per domain/audit),
 content complexity (avg words per sentence from crawler analyzer), and a correlation-based
-QC score per domain, per audit, and across audits. Outputs quality_content.json.
+QC score per domain, per audit, and across audits. Uses minimum data thresholds and
+smoothed normalization to avoid meaningless values on small datasets.
 """
 import json
 import math
@@ -10,11 +11,16 @@ from collections import defaultdict
 
 from domain_matcher import extract_domain
 
+# Defaults: only compute correlation/normalized QC when enough data points
+MIN_POINTS_FOR_CORRELATION = 3
+MIN_POINTS_FOR_NORMALIZATION = 2
+EPSILON = 0.01
 
-def _pearson(x: list[float], y: list[float]) -> float | None:
-    """Pearson correlation between x and y. Returns None if n < 2 or zero variance."""
+
+def _pearson(x: list[float], y: list[float], min_points: int = 2) -> float | None:
+    """Pearson correlation between x and y. Returns None if n < min_points or zero variance."""
     n = len(x)
-    if n != len(y) or n < 2:
+    if n != len(y) or n < min_points:
         return None
     mx = sum(x) / n
     my = sum(y) / n
@@ -27,14 +33,21 @@ def _pearson(x: list[float], y: list[float]) -> float | None:
     return round(r, 4)
 
 
-def _minmax_normalize(values: list[float]) -> list[float]:
-    """Min-max normalize to [0, 1]. If all same, return 0.5 for all."""
+def _minmax_normalize(values: list[float], epsilon: float = 0.0) -> list[float]:
+    """Min-max normalize to [0, 1]. With epsilon > 0, use smoothed normalization."""
     if not values:
         return []
     lo, hi = min(values), max(values)
     if hi == lo:
         return [0.5] * len(values)
+    if epsilon > 0:
+        return [round((v - lo + epsilon) / (hi - lo + 2 * epsilon), 4) for v in values]
     return [(v - lo) / (hi - lo) for v in values]
+
+
+def _smoothed_qc_score(norm_vis: float, norm_comp: float, epsilon: float) -> float:
+    """QC = ((norm_vis + ε) * (norm_comp + ε)) / (1 + ε). Keeps score in (0, 1] range."""
+    return round(((norm_vis + epsilon) * (norm_comp + epsilon)) / (1 + epsilon), 4)
 
 
 def run(config: dict, output_dir: Path) -> None:
@@ -49,6 +62,11 @@ def run(config: dict, output_dir: Path) -> None:
             f"website_crawler_analyzer.json not found in {output_dir}. "
             "Run option 4 (Website crawler + content analyzer) first."
         )
+
+    opts = config.get("quality_content", {})
+    min_corr = opts.get("min_points_correlation", MIN_POINTS_FOR_CORRELATION)
+    min_norm = opts.get("min_points_normalization", MIN_POINTS_FOR_NORMALIZATION)
+    epsilon = opts.get("epsilon", EPSILON)
 
     with open(urls_path, "r", encoding="utf-8") as f:
         geo_data = json.load(f)
@@ -99,16 +117,16 @@ def run(config: dict, output_dir: Path) -> None:
             all_vis.append(vis)
             all_comp.append(comp_val)
 
-    # 4. Min-max normalize and QC score (only for rows with content_complexity)
-    if all_vis and all_comp:
-        norm_vis_list = _minmax_normalize(all_vis)
-        norm_comp_list = _minmax_normalize(all_comp)
+    # 4. Smoothed min-max normalize and QC score only when enough data points
+    if len(all_vis) >= min_norm and len(all_comp) >= min_norm:
+        norm_vis_list = _minmax_normalize(all_vis, epsilon=epsilon)
+        norm_comp_list = _minmax_normalize(all_comp, epsilon=epsilon)
         idx = 0
         for row in rows:
             if row["content_complexity"] is not None:
                 nv = norm_vis_list[idx]
                 nc = norm_comp_list[idx]
-                row["qc_score"] = round(nv * nc, 4)
+                row["qc_score"] = _smoothed_qc_score(nv, nc, epsilon)
                 idx += 1
             else:
                 row["qc_score"] = None
@@ -116,21 +134,26 @@ def run(config: dict, output_dir: Path) -> None:
         for row in rows:
             row["qc_score"] = None
 
-    # 5. Per-audit: domains list + correlation
+    # 5. Per-audit: quality_content_score (correlation when >= min_corr) + domains as object
     per_audit: dict = {}
     for audit in geo_data:
         audit_rows = [r for r in rows if r["audit"] == audit]
         vis_for_r = [r["visibility"] for r in audit_rows if r["content_complexity"] is not None]
         comp_for_r = [r["content_complexity"] for r in audit_rows if r["content_complexity"] is not None]
-        corr = _pearson(vis_for_r, comp_for_r) if len(vis_for_r) >= 2 else None
+        quality_content_score = _pearson(vis_for_r, comp_for_r, min_points=min_corr) if len(vis_for_r) >= min_corr else None
+        domains_obj: dict = {}
+        for r in audit_rows:
+            domains_obj[r["domain"]] = {
+                "appearance_count": r["visibility"],
+                "avg_sentence_length": round(r["content_complexity"], 2) if r["content_complexity"] is not None else None,
+            }
         per_audit[audit] = {
-            "domains": audit_rows,
-            "correlation_visibility_complexity": corr,
-            "domain_count": len(audit_rows),
+            "quality_content_score": quality_content_score,
+            "domains": domains_obj,
         }
 
-    # 6. Across audits: global correlation + per-domain summary
-    global_corr = _pearson(all_vis, all_comp) if len(all_vis) >= 2 else None
+    # 6. Across audits: global correlation only when threshold met + per-domain summary
+    global_corr = _pearson(all_vis, all_comp, min_points=min_corr) if len(all_vis) >= min_corr else None
     domain_agg: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         domain_agg[r["domain"]].append(r)
@@ -157,8 +180,11 @@ def run(config: dict, output_dir: Path) -> None:
             "per_domain_summary": per_domain_summary,
         },
         "meta": {
-            "normalization": "minmax",
-            "qc_formula": "normalized_visibility * normalized_complexity",
+            "normalization": "minmax_smoothed",
+            "qc_formula": "((normalized_visibility + epsilon) * (normalized_complexity + epsilon)) / (1 + epsilon)",
+            "epsilon": epsilon,
+            "min_points_correlation": min_corr,
+            "min_points_normalization": min_norm,
         },
     }
 

@@ -28,5 +28,9 @@
     "max_pages_per_site": 5,
     "timeout": 10
   },
-  "quality_content": {}
+  "quality_content": {
+    "min_points_correlation": 3,
+    "min_points_normalization": 2,
+    "epsilon": 0.01
+  }
 }
