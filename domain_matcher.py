@@ -1,40 +1,10 @@
 import json
+from pathlib import Path
 from urllib.parse import urlparse
 
-# ====== CONFIG ======
-JSON_FILE = "geo_prompt_answers.json"
-
-# Domains you want to match
-TARGET_DOMAINS = {
-  "blog.pleo.io",
-  "www.ifs.com",
-  "www.gep.com",
-  "precoro.com",
-  "www.yeeflow.com",
-  "www.weproc.com",
-  "onfinity.io",
-  "en.wikipedia.org",
-  "www.prodot.de",
-  "www.reddit.com",
-  "www.cflowapps.com",
-  "www.ispnext.com",
-  "www.wirtschaftsforum.de",
-  "www.business-on.de",
-  "www.sap.com",
-  "www.onventis.de",
-  "omr.com",
-  "www.tacto.ai",
-  "agicap.com",
-  "mind-logistik.de",
-  "de.ivalua.com",
-  "www.g2.com",
-  "spendmatters.com",
-  "learning.sap.com",
-  "www.valantic.com",
-  "www.jaggaer.com",
-  "www.mittelstand-heute.com"
-}
+# ====== CONFIG (defaults when run standalone) ======
 # ====================
+
 
 def extract_domain(url: str) -> str:
     parsed = urlparse(url)
@@ -43,33 +13,56 @@ def extract_domain(url: str) -> str:
         domain = domain[4:]
     return domain
 
-def main():
-    with open(JSON_FILE, "r", encoding="utf-8") as f:
+
+def run(config: dict, output_dir: Path) -> None:
+    """Run domain matcher: read URLs and target domains from config, write matches to output_dir."""
+    paths = config.get("paths_resolved", {})
+    urls_path = paths.get("urls_by_group", "geo_prompt_answers.json")
+    target_domains_path = paths.get("target_domains", "target_domains.json")
+
+    with open(urls_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    matches = []
+    with open(target_domains_path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    if isinstance(raw, list):
+        TARGET_DOMAINS = set(d.lower() for d in raw)
+    else:
+        TARGET_DOMAINS = set(str(v).lower() for v in raw.values()) if isinstance(raw, dict) else set(raw)
 
+    matches = []
     for key, url_list in data.items():
         for i, url in enumerate(url_list):
             domain = extract_domain(url)
-
             for target in TARGET_DOMAINS:
-                if domain == target or domain.endswith("." + target):
+                t = target[4:] if target.startswith("www.") else target
+                if domain == target or domain == t or domain.endswith("." + t):
                     matches.append({
                         "group": key,
                         "index": i,
                         "url": url,
                         "domain": domain,
                     })
+                    break
 
-    print(f"\nFound {len(matches)} matches:\n")
+    out_path = output_dir / "domain_matcher.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(matches, f, indent=2, ensure_ascii=False)
 
-    for m in matches:
-        print(f"Group: {m['group']}")
-        print(f"Index: {m['index']}")
-        print(f"Domain: {m['domain']}")
-        print(f"Source: {m['url']}")
-        print("-" * 60)
+    print(f"Found {len(matches)} matches. Output: {out_path}")
+
+
+def main():
+    from pathlib import Path
+    with open("config.json", "r", encoding="utf-8") as f:
+        config = json.load(f)
+    data_dir = config.get("data_dir", ".")
+    base = Path(__file__).resolve().parent / data_dir
+    config["paths_resolved"] = {k: str((base / v).resolve()) for k, v in config.get("paths", {}).items() if v}
+    output_dir = Path("output") / "run_standalone"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    run(config, output_dir)
+
 
 if __name__ == "__main__":
     main()

@@ -2,48 +2,42 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import re
+from pathlib import Path
 
-# ===== CONFIG =====
-JSON_FILE = "geo_prompt_answers.json"
-TIMEOUT = 15
-USER_AGENT = "Mozilla/5.0 (compatible; TextCrawler/1.0)"
-# ==================
-
-HEADERS = {
-    "User-Agent": USER_AGENT
-}
 
 sentence_splitter = re.compile(r'(?<=[.!?])\s+')
+
 
 def clean_text(text: str) -> str:
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
-def split_sentences(text: str):
+
+def split_sentences(text: str) -> list:
     return sentence_splitter.split(text)
 
-def fetch_page(url: str) -> str | None:
+
+def fetch_page(url: str, timeout: int = 15, user_agent: str = "Mozilla/5.0 (compatible; TextCrawler/1.0)") -> str | None:
+    headers = {"User-Agent": user_agent}
     try:
-        r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+        r = requests.get(url, headers=headers, timeout=timeout)
         if r.status_code != 200:
             return None
         return r.text
     except Exception:
         return None
 
+
 def extract_text_from_html(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
-
-    # remove non-content tags
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
         tag.decompose()
-
     text = soup.get_text(separator=" ")
     return clean_text(text)
 
-def analyze_text(text: str):
-    sentences = split_sentences(text)
 
+def analyze_text(text: str) -> dict:
+    sentences = split_sentences(text)
     sentence_data = []
     total_words = 0
     total_chars = len(text)
@@ -52,10 +46,8 @@ def analyze_text(text: str):
         s = s.strip()
         if not s:
             continue
-
         words = len(s.split())
         chars = len(s)
-
         if words > 0:
             sentence_data.append({
                 "sentence": s,
@@ -65,7 +57,6 @@ def analyze_text(text: str):
             total_words += words
 
     sentence_count = len(sentence_data)
-
     avg_words = total_words / sentence_count if sentence_count > 0 else 0
     avg_chars = sum(s["characters"] for s in sentence_data) / sentence_count if sentence_count > 0 else 0
 
@@ -78,43 +69,59 @@ def analyze_text(text: str):
         "sentences": sentence_data
     }
 
-def main():
-    with open(JSON_FILE, "r", encoding="utf-8") as f:
+
+def run(config: dict, output_dir: Path) -> None:
+    """Run website crawler + analyzer: fetch URLs from config, analyze content, write JSON to output_dir."""
+    paths = config.get("paths_resolved", {})
+    urls_path = paths.get("urls_by_group", "geo_prompt_answers.json")
+    opts = config.get("website_crawler_analyzer", {})
+    timeout = opts.get("timeout", 15)
+    user_agent = opts.get("user_agent", "Mozilla/5.0 (compatible; TextCrawler/1.0)")
+
+    with open(urls_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    results = []
     global_index = 0
 
     for prompt_source, urls in data.items():
-        print(f"\n==============================")
-        print(f"PROMPT SOURCE: {prompt_source}")
-        print(f"==============================\n")
-
         for url in urls:
             print(f"URL: {url}")
-
-            html = fetch_page(url)
+            html = fetch_page(url, timeout=timeout, user_agent=user_agent)
             if not html:
-                print("   ❌ Failed to fetch page\n")
+                print("   Failed to fetch page")
                 continue
-
             text = extract_text_from_html(html)
             analysis = analyze_text(text)
+            results.append({
+                "url": url,
+                "prompt_source": prompt_source,
+                "total_characters": analysis["total_characters"],
+                "total_words": analysis["total_words"],
+                "sentence_count": analysis["sentence_count"],
+                "avg_words_per_sentence": analysis["avg_words_per_sentence"],
+                "avg_chars_per_sentence": analysis["avg_chars_per_sentence"],
+                "sentences": analysis["sentences"],
+            })
+            global_index += len(analysis["sentences"])
 
-            print(f"   Total Characters (page): {analysis['total_characters']}")
-            print(f"   Total Words (page): {analysis['total_words']}")
-            print(f"   Sentence Count: {analysis['sentence_count']}")
-            print(f"   Avg Words / Sentence: {analysis['avg_words_per_sentence']}")
-            print(f"   Avg Chars / Sentence: {analysis['avg_chars_per_sentence']}")
-            print("   --- Sentence Analysis ---")
+    out_path = output_dir / "website_crawler_analyzer.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
 
-            for s in analysis["sentences"]:
-                print(f"   {global_index}.")
-                print(f"      Words: {s['words']}")
-                print(f"      Characters: {s['characters']}")
-                print(f"      Sentence: {s['sentence'][:120]}{'...' if len(s['sentence']) > 120 else ''}")
-                global_index += 1
+    print(f"Output written to {out_path}")
 
-            print("\n" + "-" * 80 + "\n")
+
+def main():
+    from pathlib import Path
+    with open("config.json", "r", encoding="utf-8") as f:
+        config = json.load(f)
+    data_dir = config.get("data_dir", ".")
+    base = Path(__file__).resolve().parent / data_dir
+    config["paths_resolved"] = {k: str((base / v).resolve()) for k, v in config.get("paths", {}).items() if v}
+    output_dir = Path("output") / "run_standalone"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    run(config, output_dir)
 
 
 if __name__ == "__main__":
