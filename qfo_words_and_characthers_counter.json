@@ -1,0 +1,18 @@
+{
+  "audit1_GPT_en_prompt3": [
+    "What is procurement?",
+    "How does one procure successfully?",
+    "Which software solutions offer procurement services?"
+  ],
+  "audit2_GPT_de_prompt3": [
+    "Was ist Procurement?",
+    "Wie procure man erfolgreich?",
+    "Welche Softwarelösungen bieten Procurement an?"
+  ],
+  "audit3_perplexity_de_prompt1": [
+    "Ich bin ein mittelständisches Unternehmen, das seine Gemeinkosten im Procurement mit einer Softwarelösung senken möchte. Welche Optionen gibt es?"
+  ],
+  "audit3_perplexity_de_prompt2": [
+    "Kontrast zwischen den verfügbaren Softwares hinsichtlich ihrer Stärken und erfolgreichen Anwendungsfälle."
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "audit1_GPT_en_prompt3": [
+    "https://blog.pleo.io/en/software-tools-procurement?utm_source=chatgpt.com",
+    "https://www.ifs.com/de/products/erp/procurement",
+    "https://www.gep.com/de-de/?utm_source=chatgpt.com",
+    "https://precoro.com/de/?utm_source=chatgpt.com",
+    "https://www.yeeflow.com/de/procurement?utm_source=chatgpt.com",
+    "https://www.weproc.com/de/?utm_source=chatgpt.com",
+    "https://onfinity.io/de/e-procurement-solution.php?utm_source=chatgpt.com",
+    "https://en.wikipedia.org/wiki/OpenProcurement?utm_source=chatgpt.com",
+    "https://www.prodot.de/beschaffungssoftware?utm_source=chatgpt.com",
+    "https://www.reddit.com/r/procurement/comments/1eekd6u/what_systems_do_you_use_in_procurement_what_do/?utm_source=chatgpt.com"
+  ],
+  "audit2_GPT_de_prompt3": [
+    "https://blog.pleo.io/en/software-tools-procurement?utm_source=chatgpt.com",
+    "https://en.wikipedia.org/wiki/SAP_S/4HANA?utm_source=chatgpt.com",
+    "https://en.wikipedia.org/wiki/Oracle_Cloud_Enterprise_Resource_Planning?utm_source=chatgpt.com",
+    "https://www.gep.com/software/gep-smart/procurement-software?utm_source=chatgpt.com",
+    "https://precoro.com/de/?utm_source=chatgpt.com",
+    "https://www.weproc.com/en/purchasing-management-software/?utm_source=chatgpt.com",
+    "https://www.cflowapps.com/procurement-solutions/?utm_source=chatgpt.com",
+    "https://www.ispnext.com/de/procurement?utm_source=chatgpt.com",
+    "https://en.wikipedia.org/wiki/OpenProcurement?utm_source=chatgpt.com",
+    "https://en.wikipedia.org/wiki/Levelpath?utm_source=chatgpt.com"
+  ],
+  "audit3_perplexity_de_prompt1": [
+    "https://www.wirtschaftsforum.de/news/e-procurement-software-die-besten-in-deutschland",
+    "https://www.business-on.de/e-procurement-software-vergleich.html",
+    "https://www.sap.com/germany/products/spend-management/what-is-source-to-pay.html",
+    "https://www.onventis.de/news/beste-p2p-softwares-mittelstand/",
+    "https://omr.com/de/reviews/contenthub/procurement-software-vergleich",
+    "https://www.tacto.ai/einkaufer-lexikon/source-to-pay",
+    "https://agicap.com/de/artikel/purchase-to-pay-software/",
+    "https://mind-logistik.de/sap-einkauf/e-procurement-systeme-im-vergleich/",
+    "https://de.ivalua.com/solutions/process/source-to-pay/",
+    "https://www.g2.com/de/categories/procure-to-pay/mid-market"
+  ],
+  "audit3_perplexity_de_prompt2": [
+    "https://www.business-on.de/e-procurement-software-vergleich.html",
+    "https://spendmatters.com/2018/06/08/jaggaer-indirect-vs-coupa-e-procurement-head-to-head-technology-evaluation-and-comparison-q2-2018-preview/",
+    "https://learning.sap.com/courses/sap-ariba-sourcing-overview-de/comparing-sap-ariba-sourcing-indirect-and-direct-spend-sourcing_ae897b12-ba20-4e98-8eef-d4c70a05ec64",
+    "https://www.wirtschaftsforum.de/news/e-procurement-software-die-besten-in-deutschland",
+    "https://spendmatters.com/2019/03/11/comparing-s2p-procurement-technology-suites-on-a-functional-basis-coupa-ivalua-jaggaer-and-sap-ariba/",
+    "https://www.valantic.com/de/sap-services/mit-sap-ariba-beschaffung-optimieren/",
+    "https://www.onventis.de/news/beste-p2p-softwares-mittelstand/",
+    "https://www.jaggaer.com/success-stories",
+    "https://www.mittelstand-heute.com/sap-forward/artikel/sap-ariba-effiziente-beschaffung",
+    "https://www.onventis.de/onventis-buyer/"
+  ]
+}
