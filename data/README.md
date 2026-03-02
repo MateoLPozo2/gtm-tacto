@@ -1,5 +1,3 @@
-
-<<<<<<< HEAD
 Input files for the Tacto scripts. Paths in `config.json` are relative to this folder (via `data_dir`). All files listed here are **inputs**; script outputs are written to timestamped run directories under `output/`.
 
 | File | Structure | Consumed by |
@@ -9,7 +7,3 @@ Input files for the Tacto scripts. Paths in `config.json` are relative to this f
 | **keywords_tacto_from_hyperniche.json** | `keywords_clean`, `keywords_transliterated` (arrays of strings) | Website crawler + keyword finder |
 | **target_domains.json** | List of domain strings (or dict of domain values) | Domain matcher |
 | **brand_list.json** | Optional list of brand names | Brand crawler (optional; used to suggest a brand when running the brand matcher) |
-
-See project root **SCOPE_AND_CAPABILITIES.md** for full script inputs, outputs, and scope.
-=======
->>>>>>> 0624fc9594d289ffd343ce5af50882e968332ec5
