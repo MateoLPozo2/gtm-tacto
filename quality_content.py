@@ -108,13 +108,12 @@ def run(config: dict, output_dir: Path) -> None:
         row = {
             "audit": audit,
             "domain": domain,
-            "visibility": vis,
             "content_complexity": comp_val,
             "url_count": url_count,
         }
         rows.append(row)
         if comp_val is not None:
-            all_vis.append(vis)
+            all_vis.append(url_count)
             all_comp.append(comp_val)
 
     # 4. Smoothed min-max normalize and QC score only when enough data points
@@ -138,13 +137,13 @@ def run(config: dict, output_dir: Path) -> None:
     per_audit: dict = {}
     for audit in geo_data:
         audit_rows = [r for r in rows if r["audit"] == audit]
-        vis_for_r = [r["visibility"] for r in audit_rows if r["content_complexity"] is not None]
+        vis_for_r = [r["url_count"] for r in audit_rows if r["content_complexity"] is not None]
         comp_for_r = [r["content_complexity"] for r in audit_rows if r["content_complexity"] is not None]
         quality_content_score = _pearson(vis_for_r, comp_for_r, min_points=min_corr) if len(vis_for_r) >= min_corr else None
         domains_obj: dict = {}
         for r in audit_rows:
             domains_obj[r["domain"]] = {
-                "appearance_count": r["visibility"],
+                "url_count": r["url_count"],
                 "avg_sentence_length": round(r["content_complexity"], 2) if r["content_complexity"] is not None else None,
             }
         per_audit[audit] = {
@@ -159,16 +158,15 @@ def run(config: dict, output_dir: Path) -> None:
         domain_agg[r["domain"]].append(r)
     per_domain_summary = []
     for domain, domain_rows in sorted(domain_agg.items()):
-        total_vis = sum(r["visibility"] for r in domain_rows)
+        total_url_count = sum(r["url_count"] for r in domain_rows)
         comps = [r["content_complexity"] for r in domain_rows if r["content_complexity"] is not None]
         mean_comp = round(sum(comps) / len(comps), 2) if comps else None
         qc_scores = [r["qc_score"] for r in domain_rows if r["qc_score"] is not None]
         mean_qc = round(sum(qc_scores) / len(qc_scores), 4) if qc_scores else None
         per_domain_summary.append({
             "domain": domain,
-            "total_visibility": total_vis,
+            "total_url_count": total_url_count,
             "mean_content_complexity": mean_comp,
-            "audit_count": len(domain_rows),
             "mean_qc_score": mean_qc,
         })
 

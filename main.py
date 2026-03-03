@@ -82,6 +82,11 @@ def run_quality_content(config: dict, output_dir: Path) -> None:
     m.run(config, output_dir)
 
 
+def run_briefing(config: dict, output_dir: Path) -> None:
+    import briefing as m
+    m.run(config, output_dir)
+
+
 def menu_loop(config: dict) -> None:
     while True:
         print("\n" + "=" * 50)
@@ -92,16 +97,17 @@ def menu_loop(config: dict) -> None:
         print("  3) Domain matcher (scan URLs vs target domains)")
         print("  4) Website crawler + content analyzer")
         print("  5) Website crawler + keyword finder")
-        print("  6) Run all")
-        print("  7) Quality Content (QC) score")
+        print("  6) Quality Content (QC) score")
+        print("  7) Generate content briefing")
+        print("  8) Run all")
         print("  0) Exit")
         print("=" * 50)
         choice = input("Choice: ").strip()
         if choice == "0":
             print("Bye.")
             return
-        if choice not in ("1", "2", "3", "4", "5", "6", "7"):
-            print("Invalid option. Enter 0–7.")
+        if choice not in ("1", "2", "3", "4", "5", "6", "7", "8"):
+            print("Invalid option. Enter 0–8.")
             continue
 
         run_dir = create_run_dir()
@@ -140,6 +146,18 @@ def menu_loop(config: dict) -> None:
             elif choice == "5":
                 run_website_crawler_keyword_finder(config, run_dir)
             elif choice == "6":
+                if not (run_dir / "website_crawler_analyzer.json").exists():
+                    print("Crawler analyzer output not found; running module 4 first.")
+                    run_website_crawler_analyzer(config, run_dir)
+                run_quality_content(config, run_dir)
+            elif choice == "7":
+                if not (run_dir / "quality_content.json").exists():
+                    print("quality_content.json not found; running module 6 first.")
+                    if not (run_dir / "website_crawler_analyzer.json").exists():
+                        run_website_crawler_analyzer(config, run_dir)
+                    run_quality_content(config, run_dir)
+                run_briefing(config, run_dir)
+            elif choice == "8":
                 run_word_and_character_counter(config, run_dir)
                 run_domain_matcher(config, run_dir)
                 run_website_crawler_analyzer(config, run_dir)
@@ -148,11 +166,8 @@ def menu_loop(config: dict) -> None:
                 if bn:
                     run_brand_crawler(config, run_dir, brand_name=bn)
                 run_quality_content(config, run_dir)
-            elif choice == "7":
-                if not (run_dir / "website_crawler_analyzer.json").exists():
-                    print("Crawler analyzer output not found; running module 4 first.")
-                    run_website_crawler_analyzer(config, run_dir)
-                run_quality_content(config, run_dir)
+                run_briefing(config, run_dir)
+        
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             raise

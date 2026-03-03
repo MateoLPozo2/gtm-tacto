@@ -17,7 +17,9 @@ def extract_domain(url: str) -> str:
 def run(config: dict, output_dir: Path) -> None:
     """Run domain matcher: read URLs and target domains from config, write matches to output_dir."""
     paths = config.get("paths_resolved", {})
-    urls_path = paths.get("urls_by_group", "geo_prompt_answers.json")
+    urls_path = paths.get("urls_by_group")
+    if not urls_path:
+        raise FileNotFoundError("config paths_resolved must contain urls_by_group")
     target_domains_path = paths.get("target_domains", "target_domains.json")
 
     with open(urls_path, "r", encoding="utf-8") as f:
@@ -32,16 +34,16 @@ def run(config: dict, output_dir: Path) -> None:
 
     matches = []
     for key, url_list in data.items():
-        for i, url in enumerate(url_list):
+        for index, url in enumerate(url_list):
             domain = extract_domain(url)
             for target in TARGET_DOMAINS:
                 t = target[4:] if target.startswith("www.") else target
                 if domain == target or domain == t or domain.endswith("." + t):
                     matches.append({
-                        "group": key,
-                        "index": i,
-                        "url": url,
+                        "index": index,
+                        "audit": key,
                         "domain": domain,
+                        "url": url,
                     })
                     break
 

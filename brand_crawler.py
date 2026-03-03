@@ -102,8 +102,9 @@ def run(
 
     brand_slug = brand_name.replace(" ", "_")
     output_file = output_dir / f"brand_crawler_{brand_slug}.json"
+    out = {"audit": all_results}
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, indent=2, ensure_ascii=False)
+        json.dump(out, f, indent=2, ensure_ascii=False)
 
     print(f"\nSearch finished. Results saved to {output_file}")
 

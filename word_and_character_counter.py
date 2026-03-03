@@ -3,7 +3,6 @@ from pathlib import Path
 
 # ===== CONFIG (defaults when run standalone) =====
 JSON_FILE = "qfo_words_and_characthers_counter.json"
-Q = 30  # number of characters to show for QFO's preview
 # ==================
 
 
@@ -15,27 +14,23 @@ def run(config: dict, output_dir: Path) -> None:
     """Run QFO/query analyzer: read sentences from config path, write structured JSON to output_dir."""
     paths = config.get("paths_resolved", {})
     input_path = paths.get("qfo_sentences", JSON_FILE)
-    opts = config.get("word_and_character_counter", {})
-    preview_chars = opts.get("preview_chars", Q)
 
     with open(input_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     results = []
-    idx = 0
+    index = 0
     for prompt_source, sentences in data.items():
         for sentence in sentences:
             num_chars = len(sentence)
             num_words = count_words(sentence)
-            preview = sentence[:preview_chars]
             results.append({
-                "index": idx,
-                "prompt_source": prompt_source,
-                "characters": num_chars,
+                "index": index,
+                "audit": prompt_source,
                 "words": num_words,
-                "preview": preview,
+                "character": num_chars,
             })
-            idx += 1
+            index += 1
 
     out_path = output_dir / "word_and_character_counter.json"
     with open(out_path, "w", encoding="utf-8") as f:
