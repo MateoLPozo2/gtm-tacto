@@ -50,6 +50,11 @@ def _smoothed_qc_score(norm_vis: float, norm_comp: float, epsilon: float) -> flo
     return round(((norm_vis + epsilon) * (norm_comp + epsilon)) / (1 + epsilon), 4)
 
 
+def _pearson_to_pct(r: float) -> float:
+    """Map Pearson correlation r in [-1, 1] to percentage 0-100: (r + 1) / 2 * 100."""
+    return round((r + 1) / 2 * 100, 2)
+
+
 def run(config: dict, output_dir: Path) -> None:
     """Compute QC scores from urls_by_group (visibility) and website_crawler_analyzer.json (content complexity)."""
     paths = config.get("paths_resolved", {})
@@ -125,7 +130,8 @@ def run(config: dict, output_dir: Path) -> None:
             if row["content_complexity"] is not None:
                 nv = norm_vis_list[idx]
                 nc = norm_comp_list[idx]
-                row["qc_score"] = _smoothed_qc_score(nv, nc, epsilon)
+                raw_qc = _smoothed_qc_score(nv, nc, epsilon)
+                row["qc_score"] = round(raw_qc * 100, 2)
                 idx += 1
             else:
                 row["qc_score"] = None
@@ -139,7 +145,8 @@ def run(config: dict, output_dir: Path) -> None:
         audit_rows = [r for r in rows if r["audit"] == audit]
         vis_for_r = [r["url_count"] for r in audit_rows if r["content_complexity"] is not None]
         comp_for_r = [r["content_complexity"] for r in audit_rows if r["content_complexity"] is not None]
-        quality_content_score = _pearson(vis_for_r, comp_for_r, min_points=min_corr) if len(vis_for_r) >= min_corr else None
+        pearson_r = _pearson(vis_for_r, comp_for_r, min_points=min_corr) if len(vis_for_r) >= min_corr else None
+        quality_content_score = _pearson_to_pct(pearson_r) if pearson_r is not None else None
         domains_obj: dict = {}
         for r in audit_rows:
             domains_obj[r["domain"]] = {
@@ -152,7 +159,8 @@ def run(config: dict, output_dir: Path) -> None:
         }
 
     # 6. Across audits: global correlation only when threshold met + per-domain summary
-    global_corr = _pearson(all_vis, all_comp, min_points=min_corr) if len(all_vis) >= min_corr else None
+    global_pearson = _pearson(all_vis, all_comp, min_points=min_corr) if len(all_vis) >= min_corr else None
+    global_corr = _pearson_to_pct(global_pearson) if global_pearson is not None else None
     domain_agg: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         domain_agg[r["domain"]].append(r)
@@ -162,7 +170,7 @@ def run(config: dict, output_dir: Path) -> None:
         comps = [r["content_complexity"] for r in domain_rows if r["content_complexity"] is not None]
         mean_comp = round(sum(comps) / len(comps), 2) if comps else None
         qc_scores = [r["qc_score"] for r in domain_rows if r["qc_score"] is not None]
-        mean_qc = round(sum(qc_scores) / len(qc_scores), 4) if qc_scores else None
+        mean_qc = round(sum(qc_scores) / len(qc_scores), 2) if qc_scores else None
         per_domain_summary.append({
             "domain": domain,
             "total_url_count": total_url_count,
@@ -180,6 +188,8 @@ def run(config: dict, output_dir: Path) -> None:
         "meta": {
             "normalization": "minmax_smoothed",
             "qc_formula": "((normalized_visibility + epsilon) * (normalized_complexity + epsilon)) / (1 + epsilon)",
+            "scores_as_percentage": "All QC scores (qc_score, mean_qc_score, quality_content_score, global_correlation) are in 0-100%.",
+            "quality_content_score_formula": "(Pearson_r + 1) / 2 * 100",
             "epsilon": epsilon,
             "min_points_correlation": min_corr,
             "min_points_normalization": min_norm,
